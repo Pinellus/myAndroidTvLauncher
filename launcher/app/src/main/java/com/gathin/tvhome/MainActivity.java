@@ -202,6 +202,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private TextView raceKicker, raceHeadline, raceSessions;
     /** game_day: each team's next game from an add-on, rotating in the race panel; null when the key is off. */
     private GameDay gameDay;
+    /** weather_panel: the weather from an add-on under the clock; null when the key is off. */
+    private WeatherPanel weather;
+    private View weatherPanel;
+    private TextView weatherNow, weatherToday, weatherDays;
     private View raceBar;
     private LinearLayout racePager;
     private long rotationStart;
@@ -585,6 +589,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         raceBar = findViewById(R.id.raceBar);
         racePager = findViewById(R.id.racePager);
         gameDay = GameDay.create(this, cfg.gameDay, handler, this::updatePanel);
+        weatherPanel = findViewById(R.id.weatherPanel);
+        weatherNow = findViewById(R.id.weatherNow);
+        weatherToday = findViewById(R.id.weatherToday);
+        weatherDays = findViewById(R.id.weatherDays);
+        weather = WeatherPanel.create(this, cfg.weatherPanel, handler, this::updateWeather);
         // The rotation runs on the clock that never jumps: setting the TV's time must not stall or stretch a turn.
         rotationStart = SystemClock.elapsedRealtime();
         showStats = cfg.showStats;
@@ -771,15 +780,21 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // game_day: the panel above the dock rides up with the cards instead of being covered by them, and fades
         // out by the time it reaches the clock. The grid's own offset is read, so a jump (Home, a restored focus)
         // lands right too.
-        if (gameDay != null) {
+        if (gameDay != null || weather != null) {
             View clockBlock = findViewById(R.id.leftBlock);
+            View panel = gameDay != null ? racePanel : weatherPanel;
             grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
                 @Override
                 public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
                     int shift = rv.canScrollVertically(-1) ? rv.computeVerticalScrollOffset() : 0;
-                    racePanel.setTranslationY(-shift);
-                    int room = Math.max(1, racePanel.getTop() - clockBlock.getBottom());
-                    racePanel.setAlpha(Math.max(0f, 1f - shift / (float) room));
+                    int room = Math.max(1, panel.getTop() - clockBlock.getBottom());
+                    float alpha = Math.max(0f, 1f - shift / (float) room);
+                    racePanel.setTranslationY(gameDay != null ? -shift : 0);
+                    racePanel.setAlpha(gameDay != null ? alpha : 1f);
+                    if (weather != null) {
+                        weatherPanel.setTranslationY(-shift);
+                        weatherPanel.setAlpha(alpha);
+                    }
                 }
             });
         }
@@ -1138,6 +1153,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         if (showStats) startStats();
         if (gameDay != null) gameDay.start();
+        if (weather != null) weather.start();
         sky.update();
         wallpaperPlayer.start();
         handler.postDelayed(minuteTick, MINUTE_MS);
@@ -1323,6 +1339,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         startPending = null;   // leaving Home before the network came back: the boot's app stays closed
         stopStats();
         if (gameDay != null) gameDay.stop();
+        if (weather != null) weather.stop();
         handler.removeCallbacks(turnTick);
         if (lamp != null) lamp.stop();
         cancelPendingFocusScroll();
@@ -1391,6 +1408,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         RemoteKeys.release(this);
         cancelHoldOk();
         if (gameDay != null) gameDay.shutdown();
+        if (weather != null) weather.shutdown();
         unregisterReceiver(packageReceiver);
         if (openOnStartOnWake) unregisterReceiver(wakeReceiver);
         wallpaperPlayer.close();
@@ -2800,6 +2818,28 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * each team's next game takes a turn there, and the theme's F1 weekend is one more turn drawn as today.
      */
     private void updatePanel() {
+        updateRacePanel();
+        if (weather != null) {
+            if (!stopped) weather.readIfOld(SystemClock.elapsedRealtime());
+            updateWeather();
+        }
+    }
+
+    /** weather_panel: the add-on's three lines, unless the race or game_day panel holds the place this minute. */
+    private void updateWeather() {
+        CharSequence[] lines = weather == null ? null : weather.lines();
+        if (lines == null || racePanel.getVisibility() == View.VISIBLE) {
+            weatherPanel.setVisibility(View.GONE);
+            return;
+        }
+        weatherNow.setText(lines[0]);
+        weatherToday.setText(lines[1]);
+        weatherDays.setText(lines[2]);
+        weatherDays.setVisibility(lines[2].length() == 0 ? View.GONE : View.VISIBLE);
+        weatherPanel.setVisibility(View.VISIBLE);
+    }
+
+    private void updateRacePanel() {
         if (gameDay == null) {
             updateRace();
             return;

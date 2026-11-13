@@ -186,7 +186,7 @@ final class Forecast {
         }
     }
 
-    private static JSONObject get(String url) throws IOException, JSONException {
+    static JSONObject get(String url) throws IOException, JSONException {
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setConnectTimeout(TIMEOUT_MS);
         connection.setReadTimeout(TIMEOUT_MS);

@@ -148,3 +148,35 @@ the `game_day` key (`config.xml` or a theme); there is no card prompt for it.
    pressed on Home, right after a row ends, and on each change, and watches only while Home is on screen.
 
 The [Game Day](../addons/README.md) add-on implements this from calendar links the person adds.
+
+## The weather under the clock (weather_panel)
+
+An app can hand Home the weather, which the launcher shows in three lines in the F1 panel's place under the clock:
+the place, degrees and an icon now; today's words, high and low; and the next days. The F1 or `game_day` panel takes
+the place while it shows. The launcher only reads and never goes online. The owner opts in by naming the app's
+package in the `weather_panel` key (`config.xml` or a theme).
+
+1. Name a read-only content provider in a `meta-data` on your `<application>`, as for `game_day`:
+
+   ```xml
+   <meta-data android:name="com.gathin.tvhome.weather" android:value="com.example.weather.panel" />
+   <provider android:name=".PanelProvider" android:authorities="com.example.weather.panel" android:exported="true" />
+   ```
+
+2. Answer a query on `content://<authority>/forecast` with one `now` row, then one `day` row per day after today:
+
+   | Column | Type | What |
+   |---|---|---|
+   | `kind` | text | `now` or `day`. Without a `now` row that has a `temp` the panel is hidden. |
+   | `label` | text | The place's name on the `now` row ("Nola"), the short weekday on a `day` row ("Sab"). |
+   | `temp` | integer | Whole degrees Celsius now; null on a `day` row. |
+   | `code` | integer | The WMO weather code; the launcher draws its icon. |
+   | `text` | text | The words for the weather now, in the TV's language; null on a `day` row. |
+   | `max`, `min` | integer | The day's high and low, whole degrees Celsius. |
+   | `day` | integer | 1 by day, 0 at night (a moon instead of a sun). |
+
+   An empty cursor hides the panel; send one when your reading is too old to show.
+3. Call `notifyChange` on that URI when the rows change. The launcher queries when Home comes back, every 30 minutes
+   while it stays open, and on each change.
+
+The [Weather](../addons/weather) add-on implements this from Open-Meteo, for the place chosen in it (Nola until one is).
