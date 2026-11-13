@@ -594,6 +594,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         weatherToday = findViewById(R.id.weatherToday);
         weatherDays = findViewById(R.id.weatherDays);
         weather = WeatherPanel.create(this, cfg.weatherPanel, handler, this::updateWeather);
+        ((ViewGroup.MarginLayoutParams) weatherPanel.getLayoutParams()).topMargin += (int) (WeatherPanel.WEATHER_GAP_TOP_DP * density);
         // The rotation runs on the clock that never jumps: setting the TV's time must not stall or stretch a turn.
         rotationStart = SystemClock.elapsedRealtime();
         showStats = cfg.showStats;
@@ -735,6 +736,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // A single row never shows the names under its tiles (the title above the row names the app), so the
             // 7dp gap and 22dp label item_app.xml keeps for them would only lift the row: sit it that much lower.
             if (singleRow && !cfg.alwaysShowNames) want += (int) (29 * density);
+            if (weather != null && MainActivity.this.dockRow) want += (int) (WeatherPanel.WEATHER_GAP_BOTTOM_DP * density);
             if (grid.getPaddingTop() != want) {
                 grid.setPadding(grid.getPaddingLeft(), want, grid.getPaddingRight(), grid.getPaddingBottom());
                 // A vertical grid parks the dock on the new padding line by scrolling (onTileFocused); a sideways

@@ -24,6 +24,10 @@ final class WeatherPanel {
     static final String META = "com.gathin.tvhome.weather";
     /** Ask the add-on again after this long with Home open; it reads Open-Meteo only when its data is old. */
     static final long READ_MS = 30 * 60_000L;
+    /** Extra room between the line above (the clock block, or show_stats) and the weather's first line. */
+    static final int WEATHER_GAP_TOP_DP = 14;
+    /** Extra room between the weather's last line and the dock: the dock and the rows under it sit this much lower. */
+    static final int WEATHER_GAP_BOTTOM_DP = 24;
     private static final String[] COLUMNS = {"kind", "label", "temp", "code", "text", "max", "min", "day"};
 
     private final Context ctx;
